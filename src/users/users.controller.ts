@@ -1,0 +1,46 @@
+import { Body, ClassSerializerInterceptor, Controller, Delete, Get, Param, Post, Put, UseGuards, UseInterceptors } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+
+import { RolesGuard } from '@/roles/roles.guard';
+import { AuthGuard } from '@/auth/auth.guard';
+import { Roles } from '@/roles/roles.decorator';
+import { Role } from '@/roles/enums/role.enum';
+import { Users } from './entities/users.entity';
+import { UsersService } from './users.service'
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+
+@ApiBearerAuth()
+@UseGuards(AuthGuard, RolesGuard)
+@UseInterceptors(ClassSerializerInterceptor)
+@Roles(Role.Admin)
+@ApiTags('Users')
+@Controller('users')
+export class UsersController {
+    constructor(private readonly usersService: UsersService) { }
+
+    @Get()
+    async findAll(): Promise<Users[]> {
+        return await this.usersService.findAll();
+    }
+
+    @Post()
+    async create(@Body() createUserDto: CreateUserDto): Promise<Users> {
+        return await this.usersService.create(createUserDto);
+    }
+
+    @Get(':id')
+    async findOne(@Param('id') id: string): Promise<Users | null> {
+        return await this.usersService.findOne(id);
+    }
+
+    @Put(':id')
+    async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto): Promise<Users | null> {
+        return await this.usersService.update(id, updateUserDto);
+    }
+
+    @Delete(':id')
+    async remove(@Param('id') id: string): Promise<void> {
+        return await this.usersService.remove(id);
+    }
+}
