@@ -10,15 +10,14 @@ import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
 import { HealthModule } from './health.module';
 import { AuthModule } from './auth/auth.module';
-import { AuthGuard } from './auth/auth.guard';
 import { RolesModule } from './roles/roles.module';
 
 @Module({
   imports: [
     AuthModule,
     RolesModule,
-    HealthModule,
     UsersModule,
+    HealthModule,
     ConfigModule.forRoot({
       isGlobal: true,
       load: [configuration],
@@ -50,10 +49,6 @@ import { RolesModule } from './roles/roles.module';
   controllers: [AppController],
   providers: [
     AppService,
-    {
-      provide: APP_GUARD,
-      useClass: AuthGuard,
-    },
     {
       provide: APP_INTERCEPTOR,
       useClass: ClassSerializerInterceptor,

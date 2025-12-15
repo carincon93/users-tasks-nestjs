@@ -1,36 +1,50 @@
-import { Body, Post, UseGuards, Controller, ClassSerializerInterceptor, UseInterceptors } from "@nestjs/common";
+import { Body, Post, UseGuards, Controller, ClassSerializerInterceptor, UseInterceptors, Res } from "@nestjs/common";
+import type { Response } from 'express';
 import { ApiBody, ApiTags } from "@nestjs/swagger";
 
-import { Public } from "@/auth/auth.decorator";
 import { CreateUserDto } from "@/users/dto/create-user.dto";
+import { Users } from "@/users/entities/users.entity";
+import { JwtRefreshAuthGuard } from "./guards/jwt-refresh-auth.guard";
+import { LocalAuthGuard } from "./guards/local-auth.guard";
+import { GetCurrentUser } from "./decorators/get-current-user.decorator";
 import { LoginDto } from "./dto/login.dto";
 import { AuthService } from "./auth.service";
-import { AuthGuard } from "./auth.guard";
+import { JwtAuthGuard } from "./guards/jwt-auth.guard";
 
-@UseGuards(AuthGuard)
 @UseInterceptors(ClassSerializerInterceptor)
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
     constructor(private readonly authService: AuthService) { }
 
-    @Public()
     @Post('register')
-    async register(@Body() createUserDto: CreateUserDto) {
+    async register(@Body() createUserDto: CreateUserDto, @Res({ passthrough: true }) response: Response<any, Record<string, any>>) {
         return await this.authService.register(createUserDto);
     }
 
-    @Public()
+    @UseGuards(LocalAuthGuard)
+    @ApiBody({ type: LoginDto })
     @Post('login')
-    async login(@Body() loginDto: LoginDto) {
-        return await this.authService.login(loginDto.email, loginDto.password);
+    async login(@GetCurrentUser() user: Users, @Res({ passthrough: true }) response: Response<any, Record<string, any>>) {
+        console.log(user);
+        await this.authService.login(user, response);
+
+        // response.redirect(this.configService.getOrThrow('AUTH_UI_REDIRECT'));
+        return response.redirect('/');
     }
 
-    @Public()
-    @ApiBody({ schema: { type: 'object', properties: { refresh_token: { type: 'string' } } } })
+    @UseGuards(JwtAuthGuard)
+    @Post('logout')
+    async logout(@GetCurrentUser() user: Users, @Res({ passthrough: true }) response: Response<any, Record<string, any>>) {
+        response.clearCookie('refresh_token');
+        await this.authService.logout(user, response);
+        return response.redirect('/');
+    }
+
+    @UseGuards(JwtRefreshAuthGuard)
     @Post('refresh')
-    async refresh(@Body() body: { refresh_token: string }) {
-        return this.authService.refreshTokens(body.refresh_token);
+    async refresh(@GetCurrentUser() user: Users, @Res({ passthrough: true }) response: Response<any, Record<string, any>>) {
+        return this.authService.refreshTokens(user, response);
     }
 
 }

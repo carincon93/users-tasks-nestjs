@@ -9,7 +9,7 @@ export class Roles {
     id: string;
 
     @ApiProperty()
-    @Column({ length: 255 })
+    @Column({ type: 'varchar', length: 255 })
     name: string;
 
     @ManyToMany(type => Users, users => users.roles)

@@ -1,17 +1,16 @@
 import { Body, ClassSerializerInterceptor, Controller, Delete, Get, Param, Post, Put, UseGuards, UseInterceptors } from "@nestjs/common";
-import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
+import { ApiTags } from "@nestjs/swagger";
 
+import { JwtAuthGuard } from "@/auth/guards/jwt-auth.guard";
 import { CreateRoleDto } from "./dto/create-role.dto";
 import { UpdateRoleDto } from "./dto/update-role.dto";
 import { Roles as RolesEntity } from "./entities/roles.entity";
 import { RolesService } from "./roles.service";
-import { AuthGuard } from "@/auth/auth.guard";
-import { RolesGuard } from "./roles.guard";
+import { RolesGuard } from "./guards/roles.guard";
 import { Role } from "./enums/role.enum";
-import { Roles } from "./roles.decorator";
+import { Roles } from "./decorators/roles.decorator";
 
-@ApiBearerAuth()
-@UseGuards(AuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @UseInterceptors(ClassSerializerInterceptor)
 @Roles(Role.Admin)
 @ApiTags("Roles")

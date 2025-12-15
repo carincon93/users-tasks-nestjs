@@ -1,14 +1,20 @@
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { Module } from "@nestjs/common";
+import { PassportModule } from "@nestjs/passport";
 import { JwtModule } from "@nestjs/jwt";
+import { TypeOrmModule } from "@nestjs/typeorm";
 
-import { UsersModule } from "@/users/users.module";
 import { AuthService } from "./auth.service";
 import { AuthController } from "./auth.controller";
+import { JwtStrategy } from "./strategies/jwt.strategy";
+import { JwtRefreshStrategy } from "./strategies/jwt-refresh.strategy";
+import { LocalStrategy } from "./strategies/local.strategy";
+import { Users } from "@/users/entities/users.entity";
 
 @Module({
     imports: [
-        UsersModule,
+        PassportModule,
+        TypeOrmModule.forFeature([Users]),
         JwtModule.registerAsync({
             imports: [ConfigModule],
             useFactory: (config: ConfigService) => ({
@@ -20,7 +26,13 @@ import { AuthController } from "./auth.controller";
         })
     ],
     controllers: [AuthController],
-    providers: [AuthService],
+    providers: [
+        AuthService,
+        LocalStrategy,
+        JwtStrategy,
+        JwtRefreshStrategy,
+
+    ],
     exports: [AuthService],
 })
 

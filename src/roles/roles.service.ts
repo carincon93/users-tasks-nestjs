@@ -13,7 +13,6 @@ export class RolesService {
         private rolesRepository: Repository<Roles>,
     ) { }
 
-
     async create(createRoleDto: CreateRoleDto): Promise<Roles> {
         return await this.rolesRepository.save(createRoleDto);
     }
