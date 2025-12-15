@@ -3,7 +3,7 @@ import { Controller, Get } from '@nestjs/common';
 import { HealthCheckService, HttpHealthIndicator, HealthCheck, TypeOrmHealthIndicator } from '@nestjs/terminus';
 import { ConfigService } from '@nestjs/config';
 
-import { Public } from './auth/auth.decorator';
+import { Public } from './auth/decorators/public-auth.decorator';
 
 @Controller('health')
 export class HealthController {
