@@ -16,6 +16,8 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe());
 
   const documentConfig = new DocumentBuilder()
+    .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'AccessTokenBearer')
+    .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'RefreshTokenBearer')
     .setTitle('Users Tasks API')
     .setDescription('Users Tasks API description')
     .setVersion('1.0')

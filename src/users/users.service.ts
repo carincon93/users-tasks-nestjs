@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
-import * as bcrypt from 'bcrypt';
+import * as argon2 from 'argon2';
 
 import { Users } from "./entities/users.entity";
 import { CreateUserDto } from "./dto/create-user.dto";
@@ -18,7 +18,7 @@ export class UsersService {
         const { password, ...userData } = createUserDto;
         return await this.usersRepository.save({
             ...userData,
-            password_hash: await bcrypt.hash(password, 10),
+            password_hash: await argon2.hash(password),
         });
     }
 
@@ -31,7 +31,7 @@ export class UsersService {
     }
 
     async update(id: string, updateUserDto: UpdateUserDto): Promise<Users | null> {
-        const password_hash = updateUserDto.password ? await bcrypt.hash(updateUserDto.password, 10) : updateUserDto.password;
+        const password_hash = updateUserDto.password ? await argon2.hash(updateUserDto.password) : updateUserDto.password;
 
         await this.usersRepository.update(id, {
             username: updateUserDto.username,

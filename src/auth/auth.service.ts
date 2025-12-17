@@ -1,7 +1,7 @@
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from "@nestjs/config";
-import * as bcrypt from 'bcrypt';
+import * as argon2 from 'argon2';
 
 import { Users } from "@/users/entities/users.entity";
 import { CreateUserDto } from "@/users/dto/create-user.dto";
@@ -25,69 +25,73 @@ export class AuthService {
         }
 
         const { password, ...saferUserDto } = createUserDto;
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const hashedPassword = await argon2.hash(password);
 
         const userData = { ...saferUserDto, password_hash: hashedPassword, refresh_token_hash: null };
         return this.usersRepository.save(userData);
     }
 
-    async login(user: Users, response: Response<any, Record<string, any>>) {
-        const tokens = await this.generateTokens(user.id, user.email);
-        await this.updateUserRefreshToken(user.id, tokens.refresh_token);
+    async login(user: Users, response: Response) {
+        const {
+            accessToken,
+            refreshToken,
+            refreshTokenExpires,
+        } = await this.generateTokens(user.id, user.email);
 
-        const accessTokenSeconds = parseInt(this.configService.get('jwt.access_token_expires_in') ?? '0', 10);
-        const refreshTokenSeconds = parseInt(this.configService.get('jwt.refresh_token_expires_in') ?? '0', 10);
+        await this.updateUserRefreshToken(user.id, refreshToken);
 
-        const accessTokenExpires = new Date(Date.now() + accessTokenSeconds * 1000);
-        const refreshTokenExpires = new Date(Date.now() + refreshTokenSeconds * 1000);
-
-        response.cookie('access_token', tokens.access_token, {
-            httpOnly: true,
-            secure: this.configService.get('NODE_ENV') === 'production',
-            sameSite: 'strict',
-            expires: accessTokenExpires,
-        });
-
-        response.cookie('refresh_token', tokens.refresh_token, {
+        response.cookie('refresh_token', refreshToken, {
             httpOnly: true,
             secure: this.configService.get('NODE_ENV') === 'production',
             sameSite: 'strict',
             expires: refreshTokenExpires,
+            path: '/auth/refresh', // 🔐 VERY IMPORTANT
         });
+
+        return {
+            access_token: accessToken,
+        };
     }
 
     async logout(user: Users, response: Response<any, Record<string, any>>) {
         await this.usersRepository.update(user.id, {
             refresh_token_hash: null,
         });
-
-        response.clearCookie('access_token');
         response.clearCookie('refresh_token');
     }
 
-    async refreshTokens(user: Users, response: Response<any, Record<string, any>>) {
-        await this.login(user, response);
+    async refresh(user: Users, response: Response<any, Record<string, any>>) {
+        return await this.login(user, response);
     }
 
-    async validateUser(username: string, password: string) {
-        const user = await this.usersRepository.findOne({ relations: ['roles'], where: { email: username } });
+    async validateUser(payload: { sub: string; email: string }) {
+        const user = await this.usersRepository.findOne({ relations: ['roles'], where: { email: payload.email } });
 
-        if (!user || !bcrypt.compare(password, user.password_hash)) {
-            console.log("enter here");
-            throw new UnauthorizedException({ message: 'Invalid credentials' });
+        if (!user) {
+            throw new Error('Invalid user');
         }
 
         return user;
     }
 
-    async verifyRefreshToken(refresh_token: string, userId: string) {
+    async validatePassword(username: string, password: string) {
+        const user = await this.usersRepository.findOne({ relations: ['roles'], where: { email: username } });
+
+        if (!user || !(await argon2.verify(user.password_hash, password))) {
+            throw new Error('Invalid credentials');
+        }
+
+        return user;
+    }
+
+    async verifyRefreshToken(refreshToken: string, userId: string) {
         try {
             const user = await this.usersRepository.findOne({ where: { id: userId } });
             if (!user || !user.refresh_token_hash) {
                 throw new UnauthorizedException({ message: 'Invalid user' });
             }
 
-            const isValid = await bcrypt.compare(refresh_token, user.refresh_token_hash!);
+            const isValid = await argon2.verify(user.refresh_token_hash!, refreshToken);
             if (!isValid) {
                 throw new UnauthorizedException({ message: 'Invalid refresh token' });
             }
@@ -101,23 +105,29 @@ export class AuthService {
     async generateTokens(userId: string, email: string) {
         const payload = { sub: userId, email };
 
-        const access_token = await this.jwtService.signAsync(payload, {
+        const accessTokenSeconds = parseInt(this.configService.get('jwt.access_token_expires_in') ?? '0', 10);
+        const refreshTokenSeconds = parseInt(this.configService.get('jwt.refresh_token_expires_in') ?? '0', 10);
+
+        const accessTokenExpires = new Date(Date.now() + accessTokenSeconds * 1000);
+        const refreshTokenExpires = new Date(Date.now() + refreshTokenSeconds * 1000);
+
+        const accessToken = await this.jwtService.signAsync(payload, {
             secret: this.configService.get('jwt.access_token_secret'),
             expiresIn: this.configService.get('jwt.access_token_expires_in'),
         });
 
-        const refresh_token = await this.jwtService.signAsync(payload, {
+        const refreshToken = await this.jwtService.signAsync(payload, {
             secret: this.configService.get('jwt.refresh_token_secret'),
             expiresIn: this.configService.get('jwt.refresh_token_expires_in'),
         });
 
-        return { access_token, refresh_token };
+        return { accessToken, refreshToken, accessTokenExpires, refreshTokenExpires };
     }
 
-    async updateUserRefreshToken(userId: string, refresh_token: string) {
-        const refresh_token_hash = await bcrypt.hash(refresh_token, 10);
+    async updateUserRefreshToken(userId: string, refreshToken: string) {
+        const refreshTokenHash = await argon2.hash(refreshToken);
         await this.usersRepository.update(userId, {
-            refresh_token_hash,
+            refresh_token_hash: refreshTokenHash,
         });
     }
 }

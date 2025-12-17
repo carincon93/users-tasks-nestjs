@@ -7,11 +7,6 @@ import { ConfigService } from '@nestjs/config';
 import { AuthService } from '../auth.service';
 import { Users } from '@/users/entities/users.entity';
 
-interface tokenPayload {
-    sub: string;
-    email: string;
-}
-
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
     constructor(
@@ -19,22 +14,19 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         private readonly authService: AuthService,
     ) {
         super({
-            jwtFromRequest: ExtractJwt.fromExtractors([
-                (request) => request.cookies?.access_token,
-                (request) => request.signedCookies?.access_token,
-            ]),
+            jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
             ignoreExpiration: false,
             secretOrKey: configService.get<string>('jwt.access_token_secret')!,
         });
     }
 
-    async validate(payload: tokenPayload): Promise<Users> {
-        const user = await this.authService.validateUser(payload.email, payload.sub);
-        console.log("jwt.strategy", user);
+    async validate(payload: { sub: string; email: string }): Promise<Users> {
+        const user = await this.authService.validateUser(payload);
 
         if (!user) {
             throw new UnauthorizedException({ message: 'Invalid user' });
         }
+
         return user;
     }
 }
