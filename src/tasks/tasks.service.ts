@@ -1,11 +1,11 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { FindOptionsWhere, ILike, Repository } from "typeorm";
 
 import { Tasks } from "./entities/tasks.entity";
 import { CreateTaskDto } from "./dto/create-task.dto";
 import { UpdateTaskDto } from "./dto/update-task.dto";
-import { PaginateTaskDto } from "./dto/paginate-task.dto";
+import { PaginationTaskDto } from "./dto/pagination-task.dto";
 
 @Injectable()
 export class TasksService {
@@ -14,8 +14,25 @@ export class TasksService {
         private tasksRepository: Repository<Tasks>,
     ) { }
 
-    async findAll(query: PaginateTaskDto, userId: string): Promise<Tasks[]> {
-        return await this.tasksRepository.find({ where: { user_id: userId }, skip: query.skip, take: query.limit });
+    async findAll(query: PaginationTaskDto, userId: string): Promise<Tasks[]> {
+        const where: FindOptionsWhere<Tasks> = {
+            user_id: userId,
+        };
+
+        if (query.completed !== undefined) {
+            where.completed = query.completed;
+            console.log(query.completed);
+        }
+
+        if (query.title) {
+            where.title = ILike(`%${query.title}%`);
+        }
+
+        return this.tasksRepository.find({
+            where,
+            skip: query.offset,
+            take: query.limit,
+        });
     }
 
     async create(createTaskDto: CreateTaskDto, userId: string): Promise<Tasks> {

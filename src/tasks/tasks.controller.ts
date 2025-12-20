@@ -7,10 +7,10 @@ import { RolesGuard } from "@/roles/guards/roles.guard";
 import { Role } from "@/roles/enums/role.enum";
 import { Users } from "@/users/entities/users.entity";
 import { GetCurrentUser } from "@/auth/decorators/get-current-user.decorator";
-import { TasksService } from "./tasks.service";
 import { CreateTaskDto } from "./dto/create-task.dto";
 import { UpdateTaskDto } from "./dto/update-task.dto";
-import { PaginateTaskDto } from "./dto/paginate-task.dto";
+import { PaginationTaskDto } from "./dto/pagination-task.dto";
+import { TasksService } from "./tasks.service";
 import { Tasks } from "./entities/tasks.entity";
 
 @ApiBearerAuth('AccessTokenBearer')
@@ -25,7 +25,7 @@ export class TasksController {
     ) { }
 
     @Get()
-    async findAll(@Query() query: PaginateTaskDto, @GetCurrentUser() user: Users): Promise<Tasks[]> {
+    async findAll(@Query() query: PaginationTaskDto, @GetCurrentUser() user: Users): Promise<Tasks[]> {
         return await this.tasksService.findAll(query, user.id);
     }
 
