@@ -11,12 +11,14 @@ import { UsersModule } from './users/users.module';
 import { HealthModule } from './health.module';
 import { AuthModule } from './auth/auth.module';
 import { RolesModule } from './roles/roles.module';
+import { TasksModule } from './tasks/tasks.module';
 
 @Module({
   imports: [
     AuthModule,
     RolesModule,
     UsersModule,
+    TasksModule,
     HealthModule,
     ConfigModule.forRoot({
       isGlobal: true,
