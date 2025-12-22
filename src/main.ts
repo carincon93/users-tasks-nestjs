@@ -13,6 +13,7 @@ async function bootstrap() {
 
   app.use(cookieParser());
   app.use(helmet());
+  app.setGlobalPrefix(config.get('api.prefix') ?? 'api/v1');
   app.useGlobalPipes(
     new ValidationPipe({
       transform: true,
