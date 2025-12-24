@@ -14,25 +14,33 @@ export class TasksService {
         private tasksRepository: Repository<Tasks>,
     ) { }
 
-    async findAll(query: PaginationTaskDto, userId: string): Promise<Tasks[]> {
+    async findAll(query: PaginationTaskDto, userId: string): Promise<{ data: Tasks[], count: number }> {
         const where: FindOptionsWhere<Tasks> = {
             user_id: userId,
         };
 
         if (query.completed !== undefined) {
             where.completed = query.completed;
-            console.log(query.completed);
         }
 
         if (query.title) {
             where.title = ILike(`%${query.title}%`);
         }
 
-        return this.tasksRepository.find({
+        const count = await this.tasksRepository.count();
+        const tasks = await this.tasksRepository.find({
             where,
-            skip: query.offset,
-            take: query.limit,
+            skip: query.offset || undefined,
+            take: query.limit || undefined,
+            order: {
+                id: 'ASC',
+            },
         });
+
+        return {
+            'data': tasks,
+            'count': count
+        };
     }
 
     async create(createTaskDto: CreateTaskDto, userId: string): Promise<Tasks> {
