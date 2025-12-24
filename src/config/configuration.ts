@@ -1,7 +1,8 @@
 export default () => ({
     api: {
-        host: process.env.HOST,
-        port: +process.env.PORT! || 3000,
+        url: process.env.API_URL,
+        port: +process.env.API_PORT! || 3000,
+        prefix: process.env.API_PREFIX,
     },
     database: {
         host: process.env.POSTGRES_HOST,
