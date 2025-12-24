@@ -18,10 +18,10 @@ export class HealthController {
     @Get()
     @HealthCheck()
     check() {
-        console.log(this.config.get('api.host'));
+        console.log(this.config.get('api.url'));
         console.log(this.config.get('api.port'));
         return this.health.check([
-            () => this.http.pingCheck('api', `${this.config.get('api.host')}:${this.config.get('api.port')}/docs`, { timeout: 1000 }),
+            () => this.http.pingCheck('api', `${this.config.get('api.url')}:${this.config.get('api.port')}/docs`, { timeout: 1000 }),
             () => this.http.pingCheck('nestjs-docs', 'https://docs.nestjs.com', { timeout: 1000 }),
             () => this.db.pingCheck('database', { timeout: 1000 }),
         ]);
