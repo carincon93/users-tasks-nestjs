@@ -45,7 +45,7 @@ export class AuthService {
             secure: this.configService.get('NODE_ENV') === 'production',
             sameSite: 'strict',
             expires: refreshTokenExpires,
-            path: `${this.configService.get('API_PREFIX')}/auth/refresh`,
+            path: `${this.configService.get('api.prefix')}/auth/refresh`,
         });
 
         return {
