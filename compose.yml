@@ -1,0 +1,27 @@
+services:
+  api:
+    # Build the image from the Dockerfile in the current directory
+    build: .
+
+    # Container name
+    container_name: users-tasks-nestjs
+
+    # Host the FastAPI application on port 3000
+    ports:
+      - "3000:3000"
+
+    # Load environment variables from .env file
+    env_file:
+      - .env.development.local
+
+    # Connect to the shared database network
+    networks:
+      - shared-db
+
+    # Mount the current directory to /var/www in the container
+    volumes:
+      - .:/var/www
+
+networks:
+  shared-db:
+    external: true
