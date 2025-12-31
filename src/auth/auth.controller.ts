@@ -2,14 +2,17 @@ import { Body, Post, UseGuards, Controller, ClassSerializerInterceptor, UseInter
 import type { Response } from 'express';
 import { ApiBearerAuth, ApiBody, ApiTags } from "@nestjs/swagger";
 
-import { CreateUserDto } from "@/users/dto/create-user.dto";
-import { Users } from "@/users/entities/users.entity";
+import { CreateUserDto } from "@/user/dto/create-user.dto";
+import { User } from "@/user/entities/user.entity";
+
+import { JwtAuthGuard } from "./guards/jwt-auth.guard";
 import { JwtRefreshAuthGuard } from "./guards/jwt-refresh-auth.guard";
 import { LocalAuthGuard } from "./guards/local-auth.guard";
+
 import { GetCurrentUser } from "./decorators/get-current-user.decorator";
-import { LoginDto } from "./dto/login.dto";
+
 import { AuthService } from "./auth.service";
-import { JwtAuthGuard } from "./guards/jwt-auth.guard";
+import { LoginDto } from "./dto/login.dto";
 
 @UseInterceptors(ClassSerializerInterceptor)
 @ApiTags('Auth')
@@ -29,7 +32,7 @@ export class AuthController {
     @ApiBody({ type: LoginDto })
     @Post('login')
     async login(
-        @GetCurrentUser() user: Users,
+        @GetCurrentUser() user: User,
         @Res({ passthrough: true }) response: Response,
     ) {
         return this.authService.login(user, response);
@@ -39,7 +42,7 @@ export class AuthController {
     @UseGuards(JwtAuthGuard)
     @Post('logout')
     async logout(
-        @GetCurrentUser() user: Users,
+        @GetCurrentUser() user: User,
         @Res({ passthrough: true }) response: Response<any, Record<string, any>>
     ) {
         response.clearCookie('refresh_token');
@@ -51,7 +54,7 @@ export class AuthController {
     @UseGuards(JwtRefreshAuthGuard)
     @Post('refresh')
     async refresh(
-        @GetCurrentUser() user: Users,
+        @GetCurrentUser() user: User,
         @Res({ passthrough: true }) response: Response<any, Record<string, any>>
     ) {
         return this.authService.refresh(user, response);

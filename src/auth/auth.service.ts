@@ -1,24 +1,25 @@
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from "@nestjs/config";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { Response } from 'express';
 import * as argon2 from 'argon2';
 
-import { Users } from "@/users/entities/users.entity";
-import { CreateUserDto } from "@/users/dto/create-user.dto";
-import { Response } from 'express';
-import { Repository } from "typeorm";
-import { InjectRepository } from "@nestjs/typeorm";
+import { CreateUserDto } from "@/user/dto/create-user.dto";
+
+import { User } from "@/user/entities/user.entity";
 
 @Injectable()
 export class AuthService {
     constructor(
-        @InjectRepository(Users)
-        private usersRepository: Repository<Users>,
+        @InjectRepository(User)
+        private usersRepository: Repository<User>,
         private jwtService: JwtService,
         private configService: ConfigService
     ) { }
 
-    async register(createUserDto: CreateUserDto): Promise<Users> {
+    async register(createUserDto: CreateUserDto): Promise<User> {
         const user = await this.usersRepository.findOne({ where: { email: createUserDto.email } });
         if (user) {
             throw new UnauthorizedException({ message: 'User already exists' });
@@ -27,11 +28,11 @@ export class AuthService {
         const { password, ...saferUserDto } = createUserDto;
         const hashedPassword = await argon2.hash(password);
 
-        const userData = { ...saferUserDto, password_hash: hashedPassword, refresh_token_hash: null };
+        const userData = { ...saferUserDto, passwordHash: hashedPassword, refreshTokenHash: null };
         return this.usersRepository.save(userData);
     }
 
-    async login(user: Users, response: Response) {
+    async login(user: User, response: Response) {
         const {
             accessToken,
             refreshToken,
@@ -53,14 +54,14 @@ export class AuthService {
         };
     }
 
-    async logout(user: Users, response: Response<any, Record<string, any>>) {
+    async logout(user: User, response: Response<any, Record<string, any>>) {
         await this.usersRepository.update(user.id, {
-            refresh_token_hash: null,
+            refreshTokenHash: null,
         });
         response.clearCookie('refresh_token');
     }
 
-    async refresh(user: Users, response: Response<any, Record<string, any>>) {
+    async refresh(user: User, response: Response<any, Record<string, any>>) {
         return await this.login(user, response);
     }
 
@@ -77,7 +78,7 @@ export class AuthService {
     async validatePassword(username: string, password: string) {
         const user = await this.usersRepository.findOne({ relations: ['roles'], where: { email: username } });
 
-        if (!user || !(await argon2.verify(user.password_hash, password))) {
+        if (!user || !(await argon2.verify(user.passwordHash, password))) {
             throw new Error('Invalid credentials');
         }
 
@@ -87,11 +88,11 @@ export class AuthService {
     async verifyRefreshToken(refreshToken: string, userId: string) {
         try {
             const user = await this.usersRepository.findOne({ where: { id: userId } });
-            if (!user || !user.refresh_token_hash) {
+            if (!user || !user.refreshTokenHash) {
                 throw new UnauthorizedException({ message: 'Invalid user' });
             }
 
-            const isValid = await argon2.verify(user.refresh_token_hash!, refreshToken);
+            const isValid = await argon2.verify(user.refreshTokenHash!, refreshToken);
             if (!isValid) {
                 throw new UnauthorizedException({ message: 'Invalid refresh token' });
             }
@@ -127,7 +128,7 @@ export class AuthService {
     async updateUserRefreshToken(userId: string, refreshToken: string) {
         const refreshTokenHash = await argon2.hash(refreshToken);
         await this.usersRepository.update(userId, {
-            refresh_token_hash: refreshTokenHash,
+            refreshTokenHash: refreshTokenHash,
         });
     }
 }
